@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+  </head>
+  <body>
+  <div>
+    <div>第一步，输入Grafana RUL</div>
+    <label>请输入URL<input id="url" value="https://g.console.aliyun.com/" style="width: 600px; height: 30px;" /></label>
+    <label><button id="btn">开始免登授权</button></label>
+  </div>
+  <div>
+    <p>完成加载后，自动window.open打开Tab页面用于展示（下面iframe会每隔1分钟自动刷新，保证cookie始终有效）</p>
+    <iframe id="iframe" width="800" height="600"></iframe>
+  </div>
+  <script>
+    const refreshStep = 60000; // 刷新间隔时间
+    let iframeUrl = ''; // 缓存当前需要持续打开的地址
+    let timer = 0;
+
+
+    async function getStsLoginUrl(url) {
+      const res = await fetch(`/sts?url=${url}`);
+      const json = await res.json();
+      return json.url
+    }
+
+    // 用iframe方式，保证Cookie持续有效
+    async function refLoginState(){
+      if(!iframeUrl)return
+      document.getElementById('iframe').src = await getStsLoginUrl(iframeUrl);
+    }
+
+    document.getElementById('btn').addEventListener('click', function () {
+      iframeUrl = (document.getElementById('url').value || "").trim();
+      if(!iframeUrl)return
+      clearInterval(timer);
+      getStsLoginUrl(iframeUrl).then(function (authUrl) {
+        window.open(authUrl); // 第一次使用新页面打开
+        timer = setInterval(refLoginState, refreshStep)
+      })
+    })
+  </script>
+  </body>
+</html>
